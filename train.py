@@ -3,7 +3,11 @@
 Run with:  uv run python train.py
 """
 
+from pathlib import Path
+
+import joblib
 import numpy as np
+import sklearn
 from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
@@ -13,6 +17,7 @@ from sklearn.preprocessing import StandardScaler
 
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
+MODEL_PATH = Path(__file__).parent / "models" / "model.joblib"
 
 
 def load_data():
@@ -50,6 +55,28 @@ def build_pipeline():
     )
 
 
+def save_model(pipeline, feature_names, target_names, path=MODEL_PATH):
+    """Save the fitted pipeline together with the metadata the API needs."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    bundle = {
+        "pipeline": pipeline,
+        "feature_names": feature_names,
+        "target_names": target_names,
+        "sklearn_version": sklearn.__version__,
+    }
+    joblib.dump(bundle, path)
+    return path
+
+
+def check_reload(path, original_pipeline, X_test):
+    """Load the saved file and confirm it predicts exactly like the in-memory model."""
+    loaded = joblib.load(path)["pipeline"]
+    same_labels = np.array_equal(loaded.predict(X_test), original_pipeline.predict(X_test))
+    same_proba = np.allclose(loaded.predict_proba(X_test), original_pipeline.predict_proba(X_test))
+    if not (same_labels and same_proba):
+        raise RuntimeError("Reloaded model predicts differently from the trained one")
+
+
 def main():
     X_train, X_test, y_train, y_test, feature_names, target_names = load_data()
 
@@ -65,6 +92,11 @@ def main():
     y_pred = pipeline.predict(X_test)
     print("\nClassification report (test set):")
     print(classification_report(y_test, y_pred, target_names=target_names, digits=3))
+
+    path = save_model(pipeline, feature_names, target_names)
+    check_reload(path, pipeline, X_test)
+    print(f"Model saved to {path} ({path.stat().st_size / 1024:.1f} KB)")
+    print("Reload check passed: loaded model gives identical predictions on the test set.")
 
 
 if __name__ == "__main__":
