@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Test / tool caches
+.pytest_cache/
+
+# Trained model artifacts (regenerate with: uv run python train.py)
+models/*.joblib
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+.claude/
