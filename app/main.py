@@ -10,7 +10,8 @@ from pathlib import Path
 import joblib
 from fastapi import FastAPI
 
-from app.schemas import IrisFeatures, PredictResponse
+from app.schemas import IrisFeatures, PredictResponse, SimilarityRequest, SimilarityResponse
+from app.similarity import cosine_similarity
 
 MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "model.joblib"
 
@@ -65,3 +66,10 @@ def predict(features: IrisFeatures) -> PredictResponse:
         class_name=target_names[class_id],
         probabilities={name: round(float(p), 4) for name, p in zip(target_names, proba)},
     )
+
+
+@app.post("/similarity", response_model=SimilarityResponse)
+def similarity(request: SimilarityRequest) -> SimilarityResponse:
+    """Cosine similarity of two equal-length vectors."""
+    value = cosine_similarity(request.vector_a, request.vector_b)
+    return SimilarityResponse(cosine_similarity=round(value, 6), dimension=len(request.vector_a))
